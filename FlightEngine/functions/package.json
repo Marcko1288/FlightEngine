@@ -1,0 +1,6 @@
+{
+  "name":"flight-engine-functions","private":true,"main":"lib/index.js","engines":{"node":"22"},
+  "scripts":{"build":"tsc","test":"npm run build && node --test test/*.test.cjs"},
+  "dependencies":{"firebase-admin":"latest","firebase-functions":"latest","nodemailer":"latest"},
+  "devDependencies":{"@types/nodemailer":"latest","typescript":"latest"}
+}

@@ -1,0 +1,9 @@
+{
+  "name": "flight-engine-firebase",
+  "private": true,
+  "workspaces": ["web", "functions"],
+  "scripts": {
+    "build": "npm run build -w web && npm run build -w functions",
+    "test": "npm run test -w functions"
+  }
+}
