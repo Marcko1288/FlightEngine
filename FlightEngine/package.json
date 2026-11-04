@@ -4,6 +4,7 @@
   "workspaces": ["web", "functions"],
   "scripts": {
     "build": "npm run build -w web && npm run build -w functions",
-    "test": "npm run test -w functions"
+    "test": "npm run test -w functions && npm run test:apps-script",
+    "test:apps-script": "node --test apps-script/test/*.test.cjs"
   }
 }

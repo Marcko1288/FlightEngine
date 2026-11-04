@@ -3,9 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.searchAirportCatalog = exports.stopFlightSearch = exports.processFlightSearchTask = exports.runFlightSearchNow = exports.nightlyFlightSearch = void 0;
+exports.searchAirportCatalog = exports.stopFlightSearch = exports.processFlightSearchTask = exports.runFlightSearchNow = void 0;
 const run_control_1 = require("./run-control");
-const schedule_1 = require("./schedule");
 const airport_catalog_1 = require("./airport-catalog");
 const node_crypto_1 = require("node:crypto");
 const search_data_1 = require("./search-data");
@@ -19,7 +18,6 @@ const app_1 = require("firebase-admin/app");
 const functions_1 = require("firebase-admin/functions");
 const firestore_1 = require("firebase-admin/firestore");
 const params_1 = require("firebase-functions/params");
-const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
 const tasks_1 = require("firebase-functions/v2/tasks");
 const nodemailer_1 = __importDefault(require("nodemailer"));
@@ -30,8 +28,7 @@ const RAPIDAPI_KEYS = (0, params_1.defineJsonSecret)("RAPIDAPI_KEYS");
 const EMAIL_USER = (0, params_1.defineSecret)("EMAIL_USER");
 const EMAIL_APP_PASSWORD = (0, params_1.defineSecret)("EMAIL_APP_PASSWORD");
 const defaults = { monthsAhead: 24, topResults: 3, batchSize: 10, dropAlertPercent: 10, currency: "EUR", emailTo: "", serpApiEnabled: true, rapidApiEnabled: true, scheduleTimezone: "Europe/Rome", scheduleEnabled: true, scheduleHour: 2, scheduleMinute: 30, scheduleDays: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] };
-exports.nightlyFlightSearch = (0, scheduler_1.onSchedule)({ schedule: "*/15 * * * *", timeZone: "Europe/Rome", region: "europe-west1", timeoutSeconds: 1800, memory: "512MiB" }, async (event) => { if (await claimScheduledSlot(event.scheduleTime))
-    await enqueueRun(); });
+// Le ricerche schedulate sono eseguite da Google Apps Script (cartella apps-script/): qui restano solo le funzioni on-demand.
 exports.runFlightSearchNow = (0, https_1.onCall)({ region: "europe-west1", timeoutSeconds: 120, memory: "256MiB" }, async (req) => { if (!req.auth)
     throw new https_1.HttpsError("unauthenticated", "Login richiesto"); if (req.data?.search) {
     let search;
@@ -81,14 +78,6 @@ exports.searchAirportCatalog = (0, https_1.onCall)({ region: "europe-west1", tim
         throw new https_1.HttpsError("unavailable", "Catalogo globale temporaneamente non disponibile. Puoi inserire un codice IATA.");
     }
 });
-async function claimScheduledSlot(scheduleTime) {
-    const ref = db.doc("settings/global"), snap = await ref.get(), cfg = { ...defaults, ...snap.data() };
-    const slot = (0, schedule_1.scheduledSlot)(cfg, scheduleTime);
-    if (!slot)
-        return false;
-    return db.runTransaction(async (tx) => { const current = await tx.get(ref); if (current.data()?.lastScheduleSlot === slot)
-        return false; tx.set(ref, { lastScheduleSlot: slot, lastScheduleClaimedAt: firestore_1.FieldValue.serverTimestamp() }, { merge: true }); return true; });
-}
 async function enqueueRun(immediate, owner = "") {
     const started = Date.now(), runRef = db.collection("execution_logs").doc();
     const cfg = { ...defaults, ...(await db.doc("settings/global").get()).data() };
