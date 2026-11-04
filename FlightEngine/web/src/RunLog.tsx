@@ -31,6 +31,6 @@ export function RunLog({runId,version}:{runId:string;version?:number}){
  {!loading&&!entries.length&&<p>{version?"Nessuna chiamata o evento registrato finora. Controlla anche l’esito e gli avvisi dell’esecuzione.":"Questa esecuzione proviene da un backend senza log dettagliato. Pubblica le Functions aggiornate, poi avvia una nuova ricerca. Aggiornare soltanto il sito non basta."}</p>}
  {entries.map((entry,i)=><details key={entry.id} className="log-entry"><summary>{i+1}. {entry.startedAt?.toDate?.().toLocaleTimeString("it-IT")||"…"} · {entry.kind==="CALL"?`${entry.provider}${entry.keyIndex?` chiave ${entry.keyIndex}`:""} · ${entry.leg} · ${entry.status}${entry.httpStatus?` · HTTP ${entry.httpStatus}`:""}`:entry.message}{entry.durationMs!=null?` · ${entry.durationMs} ms`:""}</summary>
  <pre>{JSON.stringify({...entry,startedAt:entry.startedAt?.toDate?.().toISOString()||null},null,2)}</pre>
- {entry.kind==="CALL"&&<ResponseBody runId={runId} entry={entry}/>}</details>)}
+ {entry.kind==="CALL"&&(entry.bodyLogged===false?<p>Corpo della risposta non registrato (LOG_RESPONSE_BODIES=false nello script).</p>:<ResponseBody runId={runId} entry={entry}/>)}</details>)}
  </div>}</section>;
 }

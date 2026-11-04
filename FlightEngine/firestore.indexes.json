@@ -1,7 +1,6 @@
 {
   "indexes": [
-    {"collectionGroup":"flight_results","queryScope":"COLLECTION","fields":[{"fieldPath":"searchId","order":"ASCENDING"},{"fieldPath":"checkedAt","order":"DESCENDING"}]},
-    {"collectionGroup":"flight_searches","queryScope":"COLLECTION","fields":[{"fieldPath":"active","order":"ASCENDING"},{"fieldPath":"nextCheckAt","order":"ASCENDING"}]}
+    {"collectionGroup":"flight_results","queryScope":"COLLECTION","fields":[{"fieldPath":"searchId","order":"ASCENDING"},{"fieldPath":"checkedAt","order":"DESCENDING"}]}
   ],
   "fieldOverrides": [
     {"collectionGroup":"body","fieldPath":"text","indexes":[]},

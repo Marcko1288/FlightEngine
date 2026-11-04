@@ -1,5 +1,4 @@
 import {startRunControl,RunStopped} from "./run-control";
-import {scheduledSlot} from "./schedule";
 import {getAirportCatalog,catalogChoices,resolveCatalogAirport} from "./airport-catalog";
 import {createHash} from "node:crypto";
 import {normalizeSearch,type SearchConfig} from "./search-data";
@@ -13,7 +12,6 @@ import {initializeApp} from "firebase-admin/app";
 import {getFunctions} from "firebase-admin/functions";
 import {FieldValue,getFirestore,Timestamp,type DocumentReference} from "firebase-admin/firestore";
 import {defineJsonSecret,defineSecret} from "firebase-functions/params";
-import {onSchedule} from "firebase-functions/v2/scheduler";
 import {onCall,HttpsError} from "firebase-functions/v2/https";
 import {onTaskDispatched} from "firebase-functions/v2/tasks";
 import nodemailer from "nodemailer";
@@ -27,7 +25,7 @@ type Settings={monthsAhead:number;topResults:number;batchSize:number;dropAlertPe
 type Search=SearchConfig;
 const defaults:Settings={monthsAhead:24,topResults:3,batchSize:10,dropAlertPercent:10,currency:"EUR",emailTo:"",serpApiEnabled:true,rapidApiEnabled:true,scheduleTimezone:"Europe/Rome",scheduleEnabled:true,scheduleHour:2,scheduleMinute:30,scheduleDays:["MON","TUE","WED","THU","FRI","SAT","SUN"]};
 
-export const nightlyFlightSearch=onSchedule({schedule:"*/15 * * * *",timeZone:"Europe/Rome",region:"europe-west1",timeoutSeconds:1800,memory:"512MiB"},async event=>{if(await claimScheduledSlot(event.scheduleTime))await enqueueRun();});
+// Le ricerche schedulate sono eseguite da Google Apps Script (cartella apps-script/): qui restano solo le funzioni on-demand.
 export const runFlightSearchNow=onCall({region:"europe-west1",timeoutSeconds:120,memory:"256MiB"},async req=>{if(!req.auth)throw new HttpsError("unauthenticated","Login richiesto");if(req.data?.search){let search:Search;try{search=normalizeSearch(req.data.search)}catch(e:any){throw new HttpsError("invalid-argument",e.message)}return enqueueRun(search,req.auth.uid);}return enqueueRun();});
 
 export const processFlightSearchTask=onTaskDispatched({region:"europe-west1",timeoutSeconds:1800,memory:"512MiB",maxInstances:3,concurrency:1,rateLimits:{maxConcurrentDispatches:3,maxDispatchesPerSecond:1},retryConfig:{maxAttempts:3,minBackoffSeconds:30,maxBackoffSeconds:300},secrets:[SERPAPI_KEYS,RAPIDAPI_KEYS,EMAIL_USER,EMAIL_APP_PASSWORD]},async req=>processSearchTask(req.data,req.context.retryCount));
@@ -49,12 +47,6 @@ export const searchAirportCatalog=onCall({region:"europe-west1",timeoutSeconds:6
  try{const catalog=await getAirportCatalog();return{choices:catalogChoices(catalog.airports,query),stale:catalog.stale};}
  catch{throw new HttpsError("unavailable","Catalogo globale temporaneamente non disponibile. Puoi inserire un codice IATA.");}
 });
-async function claimScheduledSlot(scheduleTime:string){
- const ref=db.doc("settings/global"),snap=await ref.get(),cfg={...defaults,...snap.data()} as Settings;
- const slot=scheduledSlot(cfg,scheduleTime);
- if(!slot)return false;
- return db.runTransaction(async tx=>{const current=await tx.get(ref);if(current.data()?.lastScheduleSlot===slot)return false;tx.set(ref,{lastScheduleSlot:slot,lastScheduleClaimedAt:FieldValue.serverTimestamp()},{merge:true});return true;});
-}
 
 type TaskPayload={runId:string;taskId:string};
 async function enqueueRun(immediate?:Search,owner=""){
